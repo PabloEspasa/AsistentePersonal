@@ -6,6 +6,10 @@ namespace AsistentePersonal.Services
     {
         public string InterpretarComando(string comando)
         {
+            if (string.IsNullOrEmpty(comando))
+            {
+                return "El comando no puede estar vació";
+            }
             if (comando.Contains("hora", StringComparison.OrdinalIgnoreCase))
             {
                 return $"Son las {DateTime.Now:HH:mm}";
