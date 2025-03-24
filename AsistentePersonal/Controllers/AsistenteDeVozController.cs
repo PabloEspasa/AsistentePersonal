@@ -1,4 +1,5 @@
-﻿using AsistentePersonal.Interfaces;
+﻿using AsistentePersonal.DTOs.Request;
+using AsistentePersonal.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AsistentePersonal.Controllers
@@ -11,26 +12,38 @@ namespace AsistentePersonal.Controllers
         {
             _asistenteDeVozService = asistenteDeVozService;
         }
-        
+
         [HttpPost("iniciar-reconocimiento")]
         public IActionResult IniciarReconocimiento()
         {
-            _asistenteDeVozService.IniciarReconocimiento();
-            return Ok("Reconocimiento de voz iniciado. Di algo.");
+            try
+            {
+                _asistenteDeVozService.IniciarReconocimiento();
+                return Ok("Reconocimiento de voz iniciado. Di algo.");
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Error al iniciar el reconocimiento: {ex.Message}");
+            }
         }
-      
+
         [HttpPost("detener-reconocimiento")]
         public IActionResult DetenerReconocimiento()
         {
             _asistenteDeVozService.DetenerReconocimiento();
             return Ok("Reconocimiento de voz detenido.");
         }
-       
+
         [HttpPost("responder")]
-        public IActionResult Responder([FromBody] string texto)
+        public IActionResult Responder([FromBody] ResponderRequest request)
         {
-            _asistenteDeVozService.ResponderConVoz(texto);
-            return Ok("Respuesta hablada: " + texto);
+            if (string.IsNullOrWhiteSpace(request.Texto))
+            {
+                return BadRequest("El texto no puede estar vacío.");
+            }
+
+            _asistenteDeVozService.ResponderConVoz(request.Texto);
+            return Ok($"Respuesta hablada: {request.Texto}");
         }
     }
 }

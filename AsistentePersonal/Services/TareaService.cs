@@ -9,7 +9,6 @@ namespace AsistentePersonal.Services
     {
         private readonly AsistenteDbContext _context;
 
-
         public TareaService(AsistenteDbContext context)
         {
             _context = context;
@@ -43,17 +42,14 @@ namespace AsistentePersonal.Services
 
             return $"Tarea '{tarea.Descripcion}' eliminada.";
         }
-        
+
         public List<Tarea> ObtenerTareas(int usuarioId)
-        {
-            Usuario? usuario = _context.Usuarios.Include(u => u.Tareas).FirstOrDefault(u => u.Id == usuarioId);
+        {         
+            List<Tarea> tareas = _context.Tareas
+                .Where(t => t.UsuarioId == usuarioId)
+                .ToList();
 
-            ICollection<Tarea> tareas = usuario.Tareas;
-
-            if (tareas.Count == 0)
-                return new List<Tarea>();
-
-            return tareas.ToList();
+            return tareas;
         }
     }
 }

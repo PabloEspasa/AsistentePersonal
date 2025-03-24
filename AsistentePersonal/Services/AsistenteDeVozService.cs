@@ -12,19 +12,38 @@ namespace AsistentePersonal.Services
 
         public AsistenteDeVozService(ITareaService tareaService)
         {
-            _reconocedor = new SpeechRecognitionEngine();
+            try
+            {
+                _reconocedor = new SpeechRecognitionEngine(new System.Globalization.CultureInfo("es-ES"));
+                _reconocedor.SetInputToDefaultAudioDevice();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error al inicializar el reconocimiento de voz: " + ex.Message);
+                ResponderConVoz("Hubo un problema con el reconocimiento de voz.");
+            }
             _sintetizador = new SpeechSynthesizer();
             _tareaService = tareaService;
 
-            _reconocedor.SetInputToDefaultAudioDevice();
-
-            _reconocedor.LoadGrammar(new DictationGrammar());
-
+            Choices comandos = new Choices(new string[] { "hola", "adiós", "chau", "abrir navegador", "abrir crom", "mostrar tareas" });
+         
             _reconocedor.SpeechRecognized += Reconocedor_SpeechRecognized;
         }
+
+        private bool _reconociendo = false;
+
         public void IniciarReconocimiento()
         {
-            _reconocedor.RecognizeAsync(RecognizeMode.Multiple);
+            if (!_reconociendo)
+            {
+                if (_reconocedor.Grammars.Count == 0)
+                {
+                    _reconocedor.LoadGrammar(new DictationGrammar());
+                }
+
+                _reconociendo = true;
+                _reconocedor.RecognizeAsync(RecognizeMode.Multiple);
+            }
         }
 
         private void Reconocedor_SpeechRecognized(object sender, SpeechRecognizedEventArgs e)
@@ -40,30 +59,57 @@ namespace AsistentePersonal.Services
             {
                 ResponderConVoz("¡Hola! ¿En qué puedo ayudarte?");
             }
-            else if (comando.Contains("adiós"))
+            else if (comando.Contains("adiós") || comando.Contains("chau"))
             {
                 ResponderConVoz("Adiós, ¡hasta pronto!");
                 DetenerReconocimiento();
             }
-            else if (comando.Contains("mostrar tareas"))
+            else if (comando.Contains("tarea") || comando.Contains("mostrar tarea"))
             {
-                var tareas = _tareaService.ObtenerTareas(1);
-                ResponderConVoz($"Tus tareas son: {string.Join(", ", tareas)}");
+                List<Models.Tarea> tareas = _tareaService.ObtenerTareas(1);
+                if (tareas.Count != 0)
+                {
+                    ResponderConVoz($"Tus tareas son: {string.Join(", ", tareas)}");
+                }
+                else
+                {
+                    ResponderConVoz("No tienes tareas pendientes.");
+                }
+            }
+            else if (comando.Contains("abrir navegador") || comando.Contains("abrir crom"))
+            {
+                try
+                {
+                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                    {
+                        FileName = "https://www.google.com",
+                        UseShellExecute = true
+                    });
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("Error al abrir el navegador: " + ex.Message);
+                    ResponderConVoz("No pude abrir el navegador.");
+                }
             }
             else
             {
                 ResponderConVoz("Lo siento, no entiendo ese comando.");
             }
         }
-      
+
         public void ResponderConVoz(string texto)
         {
             _sintetizador.Speak(texto);
         }
-      
+
         public void DetenerReconocimiento()
         {
-            _reconocedor.RecognizeAsyncStop();
+            if (_reconociendo)
+            {
+                _reconociendo = false;
+                _reconocedor.RecognizeAsyncStop();
+            }
         }
     }
 }
