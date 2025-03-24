@@ -15,6 +15,10 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddScoped<IAsistenteService, AsistenteService>();
+builder.Services.AddScoped<ITareaService, TareaService>();
+builder.Services.AddScoped<IUsuarioService, UsuarioService>();
+builder.Services.AddScoped<IAsistenteDeVozService, AsistenteDeVozService>();
+
 
 var app = builder.Build();
 

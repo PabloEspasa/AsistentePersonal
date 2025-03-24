@@ -4,14 +4,7 @@ namespace AsistentePersonal.Interfaces
 {
     public interface IAsistenteService
     {
-        void AgregarUsuario(string nombre, string correo);
-
-        string InterpretarComando(string comando, Usuario usuario);
-
-        void AgregarTarea(string descripcion, int usuarioId);
-
-        string EliminarTarea(int tareaId);
-
+        string InterpretarComando(string comando, int usuarioId);
         Task<List<Historial>> ObtenerHistorialAsync(Usuario usuario);
     }
 }

@@ -2,68 +2,18 @@
 using AsistentePersonal.Interfaces;
 using AsistentePersonal.Models;
 using Microsoft.EntityFrameworkCore;
-using System.Threading;
 
 namespace AsistentePersonal.Services
 {
     public class AsistenteService : IAsistenteService
     {
         private readonly AsistenteDbContext _context;
+        private readonly ITareaService tareaService;
 
-        public AsistenteService(AsistenteDbContext context)
+        public AsistenteService(AsistenteDbContext context, ITareaService tareaService)
         {
             _context = context;
-        }
-        public void AgregarUsuario(string nombre, string correo)
-        {
-            var usuario = new Usuario
-            {
-                Nombre = nombre,
-                CorreoElectronico = correo,
-                FechaRegistro = DateTime.Now,
-                Activo = true
-            };
-
-            _context.Usuarios.Add(usuario);
-            _context.SaveChanges();
-        }
-
-        public string InterpretarComando(string comando, Usuario usuario)
-        {
-            if (comando == "Tareas")
-            {
-                var tareas = _context.Tareas.ToList(); // Obtener tareas de la base de datos
-                return string.Join("\n", tareas.Select(t => t.Descripcion));
-            }
-
-            return "Comando no reconocido";
-        }
-
-        public void AgregarTarea(string descripcion, int usuarioId)
-        {
-            var tarea = new Tarea
-            {
-                Descripcion = descripcion,
-                FechaCreacion = DateTime.Now,
-                Estado = EstadoTarea.Pendiente,
-                Prioridad = PrioridadTarea.Alta,
-                Completado = false,
-                UsuarioId = usuarioId
-            };
-
-            _context.Tareas.Add(tarea);
-            _context.SaveChanges();
-        }
-
-        public string EliminarTarea(int tareaId)
-        {
-            var tarea = _context.Tareas.Find(tareaId);
-            if (tarea == null) return "Tarea no encontrada.";
-
-            _context.Tareas.Remove(tarea);
-            _context.SaveChanges();
-            return $"Tarea '{tarea.Descripcion}' eliminada.";
-        }
+        }               
 
         public async Task<List<Historial>> ObtenerHistorialAsync(Usuario usuario)
         {
@@ -71,11 +21,36 @@ namespace AsistentePersonal.Services
                  .Where(h => h.Usuario == usuario)
                  .OrderByDescending(h => h.Fecha)
                  .ToListAsync();
-        }
+        }    
 
-        internal async Task<Usuario> ObtenerUsuarioPorId(int usuarioId)
+        public string InterpretarComando(string comando, int usuarioId)
         {
-          return await _context.Usuarios.FindAsync(usuarioId);
+            if (string.IsNullOrWhiteSpace(comando))
+                return "Comando no reconocido.";
+
+            switch (comando.ToLower())
+            {
+                case "fecha":
+                    return $"Fecha actual: {DateTime.Now.ToShortDateString()}";
+
+                case "hora":
+                    return $"Hora actual: {DateTime.Now.ToShortTimeString()}";
+
+                case "tareas":
+                    List<Tarea> tareas = tareaService.ObtenerTareas(usuarioId);
+                    return tareas.Count != 0 ? string.Join("\n", tareas) : "No tienes tareas asignadas.";
+
+                case "tareas completadas":
+                    List<Tarea> completadas = tareaService.ObtenerTareas(usuarioId).Where(t=> t.Estado == EstadoTarea.Completada).ToList();
+                    return completadas.Count != 0 ? string.Join("\n", completadas) : "No tienes tareas completadas.";
+
+                case "tareas pendientes":
+                    List<Tarea> pendientes = tareaService.ObtenerTareas(usuarioId).Where(t=> t.Estado == EstadoTarea.Pendiente).ToList();
+                    return pendientes.Count != 0 ? string.Join("\n", pendientes) : "No tienes tareas pendientes.";
+
+                default:
+                    return "Comando no reconocido.";
+            };
         }
     }
 }

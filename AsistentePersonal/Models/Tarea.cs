@@ -25,8 +25,6 @@
         public bool Completado { get; set; }
         public string? Comentarios { get; set; }
         public DateTime? FechaCompletado { get; set; }
-
-
         public virtual Usuario Usuario { get; set; }
 
     }

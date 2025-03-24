@@ -1,6 +1,8 @@
 ﻿using AsistentePersonal.DTOs;
+using AsistentePersonal.DTOs.Request;
+using AsistentePersonal.DTOs.Response;
+using AsistentePersonal.Interfaces;
 using AsistentePersonal.Models;
-using AsistentePersonal.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AsistentePersonal.Controllers
@@ -9,63 +11,62 @@ namespace AsistentePersonal.Controllers
     [ApiController]
     public class AsistenteController : ControllerBase
     {
-        private readonly AsistenteService _asistenteService;
+        private readonly IAsistenteService _asistenteService;
+        private readonly IUsuarioService _usuarioService;
 
         // Constructor
-        public AsistenteController(AsistenteService asistenteService)
+        public AsistenteController(IAsistenteService asistenteService, IUsuarioService usuarioService)
         {
             _asistenteService = asistenteService;
-        }
-
-        [HttpPost("AgregarUsuario")]
-        public IActionResult AgregarUsuario([FromBody] Usuario usuario)
-        {
-            if (usuario == null)
-                return BadRequest("Los datos del usuario son necesarios.");
-
-            _asistenteService.AgregarUsuario(usuario.Nombre, usuario.CorreoElectronico);
-            return Ok("Usuario agregado correctamente.");
+            _usuarioService = usuarioService;
         }
 
         [HttpPost("InterpretarComando")]
         public IActionResult InterpretarComando([FromBody] ComandoRequest comandoRequest)
         {
-            if (comandoRequest == null || string.IsNullOrEmpty(comandoRequest.Comando) || comandoRequest.Usuario == null)
-                return BadRequest("El comando y el usuario son necesarios.");
+            if (comandoRequest == null || string.IsNullOrEmpty(comandoRequest.Comando))
+                return BadRequest("El comando es necesario.");
 
-            var respuesta = _asistenteService.InterpretarComando(comandoRequest.Comando, comandoRequest.Usuario);
-            return Ok(respuesta);
-        }
+            string resultado = _asistenteService.InterpretarComando(comandoRequest.Comando, comandoRequest.UsuarioId);
 
-        [HttpPost("AgregarTarea")]
-        public IActionResult AgregarTarea([FromBody] Tarea tarea)
-        {
-            if (tarea == null || tarea.Descripcion == null)
-                return BadRequest("Los datos de la tarea son necesarios.");
+            InterpretarComandoResponse response = new InterpretarComandoResponse
+            {
+                Resultado = resultado,
+                Mensaje = string.IsNullOrEmpty(resultado) ? "Comando no reconocido" : "Comando procesado correctamente",
+                Exitoso = !string.IsNullOrEmpty(resultado)
+            };
 
-            _asistenteService.AgregarTarea(tarea.Descripcion, tarea.UsuarioId);
-            return Ok("Tarea agregada correctamente.");
-        }
-
-        [HttpDelete("EliminarTarea/{tareaId}")]
-        public IActionResult EliminarTarea(int tareaId)
-        {
-            var resultado = _asistenteService.EliminarTarea(tareaId);
-            if (resultado.StartsWith("Tarea"))
-                return Ok(resultado);
-
-            return NotFound(resultado);
+            return Ok(response);
         }
 
         [HttpGet("Historial/{usuarioId}")]
         public async Task<IActionResult> ObtenerHistorial(int usuarioId)
         {
-            Usuario usuario = await _asistenteService.ObtenerUsuarioPorId(usuarioId);
+            Usuario? usuario = await _usuarioService.ObtenerUsuarioPorId(usuarioId);
             if (usuario == null)
-                return NotFound("Usuario no encontrado.");
+                return NotFound(new ObtenerHistorialResponse
+                {
+                    Mensaje = "Usuario no encontrado.",
+                    Exitoso = false,
+                    Historial = new List<HistorialDto>()
+                });
 
             List<Historial> historial = await _asistenteService.ObtenerHistorialAsync(usuario);
-            return Ok(historial);
+
+            List<HistorialDto> historialDto = historial.Select(h => new HistorialDto
+            {
+                Fecha = h.Fecha,
+                Comando = h.Comando,
+                Respuesta = h.Respuesta
+            }).ToList();
+
+            var response = new ObtenerHistorialResponse
+            {
+                Historial = historialDto,
+                Mensaje = historialDto.Count > 0 ? "Historial obtenido correctamente." : "No se encontraron registros.",
+                Exitoso = historialDto.Count > 0
+            };
+            return Ok(response);
         }
     }
 }

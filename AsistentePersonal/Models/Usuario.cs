@@ -7,5 +7,7 @@
         public string CorreoElectronico { get; set; }
         public DateTime FechaRegistro { get; set; } = DateTime.Now;
         public bool Activo { get; set; } = true;
+
+        public virtual ICollection<Tarea> Tareas { get; set; } = new List<Tarea>();
     }
 }
